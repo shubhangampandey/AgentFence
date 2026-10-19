@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist/server",
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false
+  },
+  "include": ["apps/api/**/*.ts", "packages/shared/**/*.ts", "prisma/seed.ts"],
+  "exclude": ["node_modules", "dist"]
+}

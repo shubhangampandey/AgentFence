@@ -1,0 +1,17 @@
+# Deployment preparation
+
+No cloud deployment has been performed. Dockerfiles and nginx configuration are prepared artifacts, not evidence of a successful container build in this environment.
+
+1. Provision supported PostgreSQL with TLS and restricted credentials. Run migrations with a deployment role; grant the app only its required DML permissions. Keep database and OPA on private networks.
+2. Build the API with `pnpm install --frozen-lockfile`, `pnpm db:generate`, and `pnpm build`. Start with `pnpm start`. The generated Prisma source is compiled with the backend. Set the working directory to the repository/application root for environment loading. The Dockerfile retains development tooling for this portfolio build; use a pruned runtime and a migration job when hardening.
+3. Publish `dist/web` on static hosting with SPA fallback. Configure an HTTPS, same-origin `/api` reverse proxy to the API. The supplied nginx configuration demonstrates this with an upstream named `api`. For separate physical frontend/backend hosts, preserve a same-origin proxy: the fetch client intentionally uses `/api` so it never embeds deployment credentials or mutable environment URLs.
+4. Set `NODE_ENV=production`, an HTTPS `WEB_ORIGIN`, `DEMO_ENABLED=false`, fresh random `SESSION_SECRET` and `AUDIT_SIGNING_KEY`, and private `DATABASE_URL` / `OPA_URL`. Production refuses demo mode and non-HTTPS browser origin. Configure TLS validation and a trusted ingress explicitly; do not set blanket proxy trust.
+5. Run `.local/opa test infrastructure/opa -v` in CI, mount read-only fixed Rego, and do not expose the OPA management API publicly. For enterprise infrastructure use OPA authentication/authorization or mTLS at its ingress and independently controlled bundles.
+6. Use `/api/health` for liveness and `/api/ready` for database/OPA readiness. Failures cannot allow tool execution. Handle shutdown within the platform's grace period; the API drains connections and disconnects Prisma.
+7. Seed production intentionally through an operator-controlled bootstrap process. This repository's seed creates fictional accounts and requires an explicit seed password; it is a local/portfolio fixture, not a production identity provisioning system. Disable public demo access and rotate fixture account passwords or remove the fixture before any non-demo use.
+
+Compose publishes infrastructure ports to loopback only. It uses a fixed OPA release and a PostgreSQL image tag; pin verified digests, scan images/dependencies, and update releases as part of real deployment management. Persistent data is in a named volume. Do not use PGlite or trust-authenticated development PostgreSQL for public deployment.
+
+Redis is not currently required. Multiple API replicas can share PostgreSQL locks but need a shared rate limiter and session cleanup jobs. API logs exclude request bodies, cookies, and authorization headers. Add centralized monitoring, per-tenant quotas, backups, secret/key custody, session administration, and external audit anchoring before exposing a service with valuable data.
+
+The optional Gemini adapter uses `@google/genai`, explicit server model configuration, redacted decision data, an eight-second explanation deadline, validation, and deterministic fallback. Leave it off unless an operator has chosen a supported model from Google's current documentation and a user explicitly consents to sending the relevant evidence. No Gemini call is needed for any authorization, review, or connector operation.

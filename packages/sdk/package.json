@@ -1,0 +1,19 @@
+{
+  "name": "@agentfence/sdk",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "peerDependencies": {
+    "zod": "^4.0.0"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

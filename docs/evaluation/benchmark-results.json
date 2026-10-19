@@ -1,0 +1,93 @@
+{
+  "measuredAt": "2026-10-17T17:33:19.881Z",
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "win32",
+    "os": "10.0.26200",
+    "cpu": "12th Gen Intel(R) Core(TM) i5-12450H",
+    "logicalCpus": 12,
+    "memoryGiB": 15.65,
+    "database": [
+      {
+        "version": "PostgreSQL 18.6 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit"
+      }
+    ],
+    "opaVersion": "1.21.2"
+  },
+  "methodology": "One warm-up call per case. Wall-clock performance.now. Sequential samples except the explicitly concurrent batch of five. Includes HTTP OPA and DB round trips. Audit verification samples grow with the chain. Synthetic fixtures only. No network load generator. Throughput is case iterations/sec, not maximum capacity.",
+  "workspaceId": "bench_e3ad4116_ws",
+  "results": [
+    {
+      "name": "OPA HTTP policy evaluation",
+      "samples": 50,
+      "p50Ms": 1.791,
+      "p95Ms": 4.098,
+      "p99Ms": 5.515,
+      "errors": 0,
+      "throughputPerSecond": 484.4
+    },
+    {
+      "name": "Gateway permitted read",
+      "samples": 50,
+      "p50Ms": 19.202,
+      "p95Ms": 21.333,
+      "p99Ms": 24.52,
+      "errors": 0,
+      "throughputPerSecond": 51.83
+    },
+    {
+      "name": "Gateway denied export",
+      "samples": 50,
+      "p50Ms": 11.286,
+      "p95Ms": 12.979,
+      "p99Ms": 14.376,
+      "errors": 0,
+      "throughputPerSecond": 88.74
+    },
+    {
+      "name": "Gateway approval required",
+      "samples": 50,
+      "p50Ms": 11.251,
+      "p95Ms": 15.676,
+      "p99Ms": 33.486,
+      "errors": 0,
+      "throughputPerSecond": 83.56
+    },
+    {
+      "name": "Invalid request rejection",
+      "samples": 50,
+      "p50Ms": 1.79,
+      "p95Ms": 2.682,
+      "p99Ms": 2.857,
+      "errors": 0,
+      "throughputPerSecond": 551.73
+    },
+    {
+      "name": "Atomic audit append",
+      "samples": 50,
+      "p50Ms": 2.665,
+      "p95Ms": 4.02,
+      "p99Ms": 4.794,
+      "errors": 0,
+      "throughputPerSecond": 364.4
+    },
+    {
+      "name": "Full audit verification",
+      "samples": 10,
+      "p50Ms": 6.97,
+      "p95Ms": 10.595,
+      "p99Ms": 10.595,
+      "errors": 0,
+      "throughputPerSecond": 136.5
+    },
+    {
+      "name": "Five concurrent reads (serialized workspace)",
+      "samples": 10,
+      "p50Ms": 86.154,
+      "p95Ms": 94.505,
+      "p99Ms": 94.505,
+      "errors": 0,
+      "throughputPerSecond": 11.6
+    }
+  ]
+}

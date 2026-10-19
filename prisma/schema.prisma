@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client"
+  output = "../apps/api/src/generated/prisma"
+  importFileExtension = "js"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  OWNER
+  ADMIN
+  SECURITY_OPERATOR
+  APPROVER
+  AUDITOR
+  VIEWER
+}
+enum InvocationStatus {
+  PERMITTED
+  DENIED
+  APPROVAL_REQUIRED
+  EXECUTED
+  FAILED
+  EXPIRED
+  REJECTED
+}
+model Workspace {
+  id String @id
+  name String
+  environment String @default("sandbox")
+  auditSequence Int @default(0)
+  auditHead String @default("GENESIS")
+  createdAt DateTime @default(now())
+  memberships Membership[]
+  agents Agent[]
+  policies PolicyVersion[]
+  resources Resource[]
+  invocations Invocation[]
+  events AuditEvent[]
+  labRuns LabRun[]
+}
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  name String
+  passwordHash String
+  memberships Membership[]
+  sessions Session[]
+  createdAt DateTime @default(now())
+}
+model Membership {
+  id String @id @default(uuid())
+  workspaceId String
+  userId String
+  role Role
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@unique([workspaceId,userId])
+}
+model Session {
+  id String @id
+  userId String
+  workspaceId String
+  csrfHash String
+  expiresAt DateTime
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([expiresAt])
+}
+model Agent {
+  id String @id @default(uuid())
+  workspaceId String
+  name String
+  description String
+  purpose String
+  environment String @default("sandbox")
+  suspended Boolean @default(false)
+  createdAt DateTime @default(now())
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  credentials Credential[]
+  capabilities Capability[]
+  invocations Invocation[]
+  @@index([workspaceId])
+}
+model Credential {
+  id String @id @default(uuid())
+  agentId String
+  hash String @unique
+  prefix String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  agent Agent @relation(fields:[agentId],references:[id],onDelete:Cascade)
+}
+model Capability {
+  id String @id @default(uuid())
+  agentId String
+  tool String
+  operations String[]
+  resources String[] @default([])
+  classifications String[] @default(["public","internal"])
+  environment String @default("sandbox")
+  maxAmount Int @default(0)
+  expiresAt DateTime
+  revokedAt DateTime?
+  agent Agent @relation(fields:[agentId],references:[id],onDelete:Cascade)
+  @@index([agentId,tool])
+}
+model PolicyVersion {
+  id String @id @default(uuid())
+  workspaceId String
+  version Int
+  name String
+  description String
+  rules Json
+  active Boolean @default(false)
+  validated Boolean @default(false)
+  createdBy String
+  createdAt DateTime @default(now())
+  publishedAt DateTime?
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  @@unique([workspaceId,version])
+  @@index([workspaceId,active])
+}
+model Resource {
+  id String @id
+  workspaceId String
+  tool String
+  kind String
+  classification String @default("internal")
+  version Int @default(1)
+  data Json
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  @@index([workspaceId,tool,kind])
+}
+model Invocation {
+  id String @id @default(uuid())
+  workspaceId String
+  agentId String
+  initiatedBy String?
+  credentialId String?
+  correlationId String
+  idempotencyKey String
+  payloadHash String
+  tool String
+  operation String
+  arguments Json
+  status InvocationStatus
+  policyVersion Int
+  decision Json
+  preview Json?
+  result Json?
+  trace Json
+  approvalExpiresAt DateTime?
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  agent Agent @relation(fields:[agentId],references:[id])
+  @@unique([workspaceId,agentId,idempotencyKey])
+  @@index([workspaceId,createdAt])
+  @@index([workspaceId,status])
+}
+model AuditEvent {
+  id String @id @default(uuid())
+  workspaceId String
+  sequence Int
+  type String
+  actor String
+  invocationId String?
+  evidence Json
+  previousHash String
+  hash String
+  signature String
+  seeded Boolean @default(false)
+  createdAt DateTime @default(now())
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  @@unique([workspaceId,sequence])
+  @@index([workspaceId,createdAt])
+}
+model LabRun {
+  id String @id @default(uuid())
+  workspaceId String
+  results Json
+  createdAt DateTime @default(now())
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+}

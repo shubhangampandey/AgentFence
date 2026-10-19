@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.local/
+apps/api/src/generated/
+test-results/
+playwright-report/
+*.log

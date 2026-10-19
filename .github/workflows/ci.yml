@@ -1,0 +1,44 @@
+name: Validate AgentFence
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agentfence
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/agentfence
+      OPA_URL: http://127.0.0.1:8181
+      SESSION_SECRET: ci-session-secret-at-least-thirty-two-characters
+      AUDIT_SIGNING_KEY: ci-audit-secret-at-least-thirty-two-characters
+      WEB_ORIGIN: http://localhost:5173
+      DEMO_ENABLED: "true"
+      DEMO_PASSWORD: CI-only-synthetic-passphrase-123456
+      GEMINI_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run setup
+      - run: .local/opa run --server --addr=127.0.0.1:8181 infrastructure/opa > /tmp/opa.log 2>&1 &
+      - run: .local/opa test infrastructure/opa -v
+      - run: pnpm db:generate && pnpm db:migrate && pnpm db:seed
+      - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
+      - run: pnpm smoke:compiled
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: test-results/
