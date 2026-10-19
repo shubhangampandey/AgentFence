@@ -8,13 +8,14 @@ import pinoHttp from "pino-http";
 import { randomUUID } from "node:crypto";
 import argon2 from "argon2";
 import { z, ZodError } from "zod";
-import { config } from "./config.js";
+import { config, isWebOrigin } from "./config.js";
 import { db, locked } from "./db.js";
 import { AppError, check } from "./errors.js";
 import {
   authenticated,
   requirePermission,
   login,
+  register,
   cookieOptions,
 } from "./auth.js";
 import { hash, sign, redact } from "./crypto.js";
@@ -45,7 +46,13 @@ export const app = express();
 app.disable("x-powered-by");
 app.set("query parser", "simple");
 app.use(helmet());
-app.use(cors({ origin: config.WEB_ORIGIN, credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) =>
+      callback(null, !origin || isWebOrigin(origin)),
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: "32kb" }));
 app.use(cookieParser());
 app.use((req, res, next) => {
@@ -105,12 +112,54 @@ app.get("/api/config", (_req, res) =>
 );
 app.get("/api/openapi.json", (_req, res) => res.json(openapi));
 app.post("/api/auth/login", authLimit, async (req, res) => {
-  check(req.get("Origin") === config.WEB_ORIGIN, 403, "ORIGIN_REJECTED");
+  check(isWebOrigin(req.get("Origin")), 403, "ORIGIN_REJECTED");
   const input = z
-    .object({ email: z.email().max(200), password: z.string().min(1).max(200) })
+    .object({
+      email: z.string().trim().toLowerCase().pipe(z.email().max(200)),
+      password: z.string().min(1).max(200),
+    })
     .strict()
     .parse(req.body);
   res.json(await login(input.email, input.password, res));
+});
+app.post("/api/auth/register", authLimit, async (req, res) => {
+  check(isWebOrigin(req.get("Origin")), 403, "ORIGIN_REJECTED");
+  const input = z
+    .object({
+      name: z.string().trim().min(2).max(100),
+      email: z.string().trim().toLowerCase().pipe(z.email().max(200)),
+      password: z.string().min(14).max(200),
+    })
+    .strict()
+    .parse(req.body);
+  res
+    .status(201)
+    .json(await register(input.name, input.email, input.password, res));
+});
+app.get("/api/auth/session", (req, res, next) => {
+  void authenticated(req, res, (error?: unknown) => {
+    if (error instanceof AppError && error.status === 401) {
+      res.json(null);
+      return;
+    }
+    if (error) {
+      next(error);
+      return;
+    }
+    void db.workspace
+      .findUnique({
+        where: { id: req.auth!.workspaceId },
+        select: { id: true, name: true, environment: true },
+      })
+      .then((workspace) =>
+        res.json({
+          user: req.auth,
+          workspace,
+          csrfToken: sign(req.cookies.af_session, config.SESSION_SECRET),
+        }),
+      )
+      .catch(next);
+  });
 });
 app.post("/api/auth/demo", authLimit, async (req, res) => {
   check(
@@ -118,7 +167,7 @@ app.post("/api/auth/demo", authLimit, async (req, res) => {
     404,
     "NOT_FOUND",
   );
-  check(req.get("Origin") === config.WEB_ORIGIN, 403, "ORIGIN_REJECTED");
+  check(isWebOrigin(req.get("Origin")), 403, "ORIGIN_REJECTED");
   const { role } = z
     .object({
       role: z.enum(["operator", "approver", "auditor"]).default("operator"),

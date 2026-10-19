@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import argon2 from "argon2";
+import { randomUUID } from "node:crypto";
 import { db, locked } from "./db.js";
-import { config } from "./config.js";
+import { config, isWebOrigin } from "./config.js";
 import { hash, token, sign, equal } from "./crypto.js";
 import { check } from "./errors.js";
 import { can, type Role } from "../../../packages/shared/src/index.js";
@@ -29,8 +30,10 @@ export const cookieOptions = {
   path: "/api",
 };
 export async function login(email: string, password: string, res: Response) {
-  const user = await db.user.findUnique({
-    where: { email },
+  const user = await db.user.findFirst({
+    where: {
+      email: { equals: email.trim().toLowerCase(), mode: "insensitive" },
+    },
     include: { memberships: true },
   });
   // Fixed-cost Argon2 work also occurs for unknown users.
@@ -73,6 +76,40 @@ export async function login(email: string, password: string, res: Response) {
     }),
   };
 }
+export async function register(
+  name: string,
+  email: string,
+  password: string,
+  res: Response,
+) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const existing = await db.user.findFirst({
+    where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+    select: { id: true },
+  });
+  check(!existing, 409, "EMAIL_ALREADY_REGISTERED");
+  const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
+  try {
+    await db.$transaction(async (tx) => {
+      const workspace = await tx.workspace.create({
+        data: { id: randomUUID(), name: `${name}'s workspace` },
+      });
+      await tx.user.create({
+        data: {
+          email: normalizedEmail,
+          name,
+          passwordHash,
+          memberships: { create: { workspaceId: workspace.id, role: "OWNER" } },
+        },
+      });
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "P2002")
+      check(false, 409, "EMAIL_ALREADY_REGISTERED");
+    throw error;
+  }
+  return login(normalizedEmail, password, res);
+}
 export async function authenticated(
   req: Request,
   _res: Response,
@@ -100,7 +137,7 @@ export async function authenticated(
       check(
         supplied &&
           equal(hash(supplied), session.csrfHash) &&
-          req.get("Origin") === config.WEB_ORIGIN,
+          isWebOrigin(req.get("Origin")),
         403,
         "CSRF_REJECTED",
       );

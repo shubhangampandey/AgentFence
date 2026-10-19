@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .env
+.env.production.local
+.render-bin/
+.vercel/
 .local/
 apps/api/src/generated/
 test-results/

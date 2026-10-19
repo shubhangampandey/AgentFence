@@ -17,6 +17,24 @@ const schema = z.object({
   DEMO_ENABLED: z.enum(["true", "false"]).default("false"),
 });
 export const config = schema.parse(process.env);
+export function isWebOrigin(origin?: string) {
+  if (origin === config.WEB_ORIGIN) return true;
+  if (!origin || config.NODE_ENV === "production") return false;
+  try {
+    const expected = new URL(config.WEB_ORIGIN);
+    const actual = new URL(origin);
+    const loopbacks = ["localhost", "127.0.0.1", "[::1]"];
+    return (
+      actual.origin === origin &&
+      actual.protocol === expected.protocol &&
+      actual.port === expected.port &&
+      loopbacks.includes(actual.hostname) &&
+      loopbacks.includes(expected.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
 if (
   config.NODE_ENV === "production" &&
   (!config.WEB_ORIGIN.startsWith("https://") || config.DEMO_ENABLED === "true")

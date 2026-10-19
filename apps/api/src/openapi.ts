@@ -90,6 +90,44 @@ export const openapi = {
         responses: { "200": result, "401": result },
       },
     },
+    "/auth/register": {
+      post: {
+        summary:
+          "Create an account and isolated sandbox workspace; configured Origin required",
+        security: [],
+        requestBody: body({
+          type: "object",
+          properties: {
+            name: { type: "string", minLength: 2, maxLength: 100 },
+            email: { type: "string", format: "email", maxLength: 200 },
+            password: { type: "string", minLength: 14, maxLength: 200 },
+          },
+          required: ["name", "email", "password"],
+          additionalProperties: false,
+        }),
+        responses: {
+          "201": result,
+          "400": result,
+          "403": result,
+          "409": result,
+          "429": result,
+        },
+      },
+    },
+    "/auth/session": {
+      get: {
+        summary: "Current session, or null when signed out",
+        security: [],
+        responses: {
+          "200": {
+            description: "Session and CSRF token, or null",
+            content: {
+              "application/json": { schema: { type: ["object", "null"] } },
+            },
+          },
+        },
+      },
+    },
     "/session": route("get", "Current human session and CSRF token"),
     "/auth/logout": route("post", "Expire current session", empty),
     "/agents": {

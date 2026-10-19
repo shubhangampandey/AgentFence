@@ -33,7 +33,16 @@ export async function request<T = any>(
     window.dispatchEvent(new Event("agentfence:session-expired"));
   if (!response.ok)
     throw new ApiError(
-      body.error?.code?.replaceAll("_", " ") ?? "Request failed",
+      (
+        {
+          INVALID_LOGIN:
+            "Email or password is incorrect. Use your registered account, or create an account.",
+          EMAIL_ALREADY_REGISTERED:
+            "An account already exists for this email. Sign in instead.",
+        } as Record<string, string>
+      )[body.error?.code] ??
+        body.error?.code?.replaceAll("_", " ") ??
+        "Request failed",
       response.status,
     );
   return body;
@@ -53,7 +62,9 @@ export function useAction(path: string, method = "POST") {
     onSuccess: () =>
       client.invalidateQueries({
         predicate: (q) =>
-          !["/session", "/config"].includes(String(q.queryKey[0])),
+          !["/session", "/auth/session", "/config"].includes(
+            String(q.queryKey[0]),
+          ),
       }),
   });
 }

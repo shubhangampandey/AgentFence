@@ -1,6 +1,8 @@
 # Deployment preparation
 
-No cloud deployment has been performed. Dockerfiles and nginx configuration are prepared artifacts, not evidence of a successful container build in this environment.
+The Vercel frontend proxies `/api` to the Render backend using `vercel.json`. The native Render build runs `scripts/render-build.mjs`, which downloads checksum-verified OPA, generates Prisma, and builds the application. `scripts/render-start.mjs` starts OPA on loopback, applies database migrations, bootstraps the synthetic workspace with the configured password, and serves the API and built frontend on Render's port. Keep `DEMO_ENABLED=false` in production and use the regular login form.
+
+The free Render PostgreSQL database expires on November 18, 2026. Export and migrate or upgrade before expiry. Free backend instances sleep when inactive. Dockerfiles and nginx configuration remain alternative deployment artifacts.
 
 1. Provision supported PostgreSQL with TLS and restricted credentials. Run migrations with a deployment role; grant the app only its required DML permissions. Keep database and OPA on private networks.
 2. Build the API with `pnpm install --frozen-lockfile`, `pnpm db:generate`, and `pnpm build`. Start with `pnpm start`. The generated Prisma source is compiled with the backend. Set the working directory to the repository/application root for environment loading. The Dockerfile retains development tooling for this portfolio build; use a pruned runtime and a migration job when hardening.

@@ -288,6 +288,7 @@ export function App() {
         <Route path="/architecture" element={<PublicDocs />} />
         <Route path="/docs" element={<PublicDocs developer />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Login registering />} />
         <Route path="/app" element={<Layout />}>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<Overview />} />
@@ -490,7 +491,7 @@ function Landing() {
     </div>
   );
 }
-function Login() {
+function Login({ registering = false }: { registering?: boolean }) {
   const navigate = useNavigate();
   const client = useQueryClient();
   const config = useApi("/config");
@@ -531,23 +532,49 @@ function Login() {
       </div>
       <main className="login-form">
         <p className="eyebrow">NORTHSTAR LABS</p>
-        <h2>Enter your workspace</h2>
+        <h2>{registering ? "Create your account" : "Enter your workspace"}</h2>
         <p className="description">
-          Secure access to your agent security operations.
+          {registering
+            ? "Create a separate sandbox workspace. Use at least 14 characters for your password."
+            : "Sign in with your registered account. Demo credentials only work for the seeded demo account."}
         </p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
             const form = new FormData(e.currentTarget);
-            void enter("/auth/login", Object.fromEntries(form));
+            if (
+              registering &&
+              form.get("password") !== form.get("confirmPassword")
+            ) {
+              setError("Passwords do not match.");
+              return;
+            }
+            form.delete("confirmPassword");
+            void enter(
+              registering ? "/auth/register" : "/auth/login",
+              Object.fromEntries(form),
+            );
           }}
         >
+          {registering && (
+            <label>
+              Full name
+              <input
+                name="name"
+                required
+                minLength={2}
+                maxLength={100}
+                autoComplete="name"
+              />
+            </label>
+          )}
           <label>
             Email
             <input
               name="email"
               type="email"
               required
+              maxLength={200}
               autoComplete="username"
               placeholder="you@company.com"
             />
@@ -558,15 +585,40 @@ function Login() {
               name="password"
               type="password"
               required
-              autoComplete="current-password"
+              minLength={registering ? 14 : 1}
+              maxLength={200}
+              autoComplete={registering ? "new-password" : "current-password"}
             />
           </label>
+          {registering && (
+            <label>
+              Confirm password
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={14}
+                maxLength={200}
+                autoComplete="new-password"
+              />
+            </label>
+          )}
           <Button loading={!!busy} type="submit">
-            Sign in <ArrowRight size={16} />
+            {registering ? "Create account" : "Sign in"}{" "}
+            <ArrowRight size={16} />
           </Button>
         </form>
+        <p>
+          {registering ? "Already registered? " : "New here? "}
+          <Link
+            to={registering ? "/login" : "/register"}
+            onClick={() => setError("")}
+          >
+            {registering ? "Sign in" : "Create an account"}
+          </Link>
+        </p>
         {error && <Failure error={error} />}
-        {config.data?.demoEnabled && (
+        {!registering && config.data?.demoEnabled && (
           <div className="demo-access">
             <div className="divider-label">EXPLORE THE SYNTHETIC WORKSPACE</div>
             <Button
@@ -600,7 +652,7 @@ function Login() {
   );
 }
 function Layout() {
-  const session = useApi("/session");
+  const session = useApi("/auth/session");
   const navigate = useNavigate();
   const client = useQueryClient();
   const location = useLocation();
@@ -653,6 +705,7 @@ function Layout() {
   }, []);
   useEffect(() => setMobile(false), [location.pathname]);
   if (session.isPending) return <Loading />;
+  if (session.data === null) return <Navigate to="/login" replace />;
   if (
     session.error instanceof ApiError &&
     [401, 403].includes(session.error.status)
