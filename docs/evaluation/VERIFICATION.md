@@ -2,27 +2,27 @@
 
 Executed locally on 17 October 2026. This report describes observed results, not certification or a claim of an external deployment.
 
-| Check                                        | Result                                                                                                 |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Frozen dependency installation               | Passed; exact package versions and lockfile retained                                                   |
-| Prisma schema validation / migration status  | Passed; versioned SQL applied to native PostgreSQL 18.6 and the PGlite fallback                        |
-| Deterministic Northstar seed                 | Passed on both database paths                                                                          |
-| Demo reset and re-seed                       | Passed; fixed workspace scope, production guard, unrelated workspaces preserved                        |
-| TypeScript strict checking                   | Passed                                                                                                 |
-| ESLint, including after SDK generation       | Passed; generated output excluded                                                                      |
-| React production build                       | Passed; largest JavaScript chunk approximately 207 kB, graph loaded separately                         |
-| Production frontend rendering                | Passed at desktop/mobile widths, including the lazy decision graph                                     |
-| Compiled backend and SDK build               | Passed; SDK ESM and declarations generated and local package archive created                           |
-| Native PostgreSQL regression suite           | 31 tests passed                                                                                        |
-| PGlite development fallback regression suite | 31 tests passed with `DATABASE_POOL_SIZE=1`                                                            |
-| Real OPA Rego tests                          | 6 tests passed on OPA 1.21.2                                                                           |
-| Playwright desktop and mobile                | 4 tests passed using installed Chrome, approximately 24 seconds total                                  |
-| Compiled API + built SDK local smoke         | Passed readiness, successful read, idempotent replay, and denied export                                |
-| Benchmark                                    | Completed; eight measured cases, zero recorded errors; JSON artifact includes sample sizes/environment |
-| Public cloud deployment                      | Not attempted                                                                                          |
-| Docker builds / Compose execution            | Prepared only; Docker is not installed on this host                                                    |
-| Remote CI workflow                           | Prepared; not executed on GitHub                                                                       |
-| Live Gemini request                          | Not executed; no API key/model configured                                                              |
+| Check                                        | Result                                                                                                       |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Frozen dependency installation               | Passed; exact package versions and lockfile retained                                                         |
+| Prisma schema validation / migration status  | Passed; versioned SQL applied to native PostgreSQL 18.6 and the PGlite fallback                              |
+| Deterministic Northstar seed                 | Passed on both database paths                                                                                |
+| Demo reset and re-seed                       | Passed; fixed workspace scope, production guard, unrelated workspaces preserved                              |
+| TypeScript strict checking                   | Passed                                                                                                       |
+| ESLint, including after SDK generation       | Passed; generated output excluded                                                                            |
+| React production build                       | Passed; largest JavaScript chunk approximately 207 kB, graph loaded separately                               |
+| Production frontend rendering                | Passed at desktop/mobile widths, including the lazy decision graph                                           |
+| Compiled backend and SDK build               | Passed; SDK ESM and declarations generated and local package archive created                                 |
+| Native PostgreSQL regression suite           | 31 tests passed                                                                                              |
+| PGlite development fallback regression suite | 31 tests passed with `DATABASE_POOL_SIZE=1`                                                                  |
+| Real OPA Rego tests                          | 6 tests passed on OPA 1.21.2                                                                                 |
+| Playwright desktop and mobile                | 4 tests passed using installed Chrome, approximately 24 seconds total                                        |
+| Compiled API + built SDK local smoke         | Passed readiness, successful read, idempotent replay, and denied export                                      |
+| Benchmark                                    | Completed; eight measured cases, zero recorded errors; JSON artifact includes sample sizes/environment       |
+| Public cloud deployment                      | Not attempted                                                                                                |
+| Docker builds / Compose execution            | Prepared only; Docker is not installed on this host                                                          |
+| Remote CI workflow                           | Prepared; not executed on GitHub                                                                             |
+| Live Gemini request                          | Passed on 19 October 2026; authenticated explanation returned `source: gemini` using `gemini-3.5-flash-lite` |
 
 ## What the automated tests actually cover
 
@@ -63,4 +63,4 @@ OPA 1.21.2 was downloaded from the official release and verified against its pub
 
 ## Remaining scope
 
-The deterministic platform is functional. Remaining enterprise/optional scope includes SSO/MFA, invitations/recovery and account lifecycle, workspace switching, advanced policy groups and multi-bundle management, externally witnessed audit checkpoints/key rotation, distributed limits/queues, external connector outcomes, retention automation, live per-stage streaming, AI policy suggestions/remediation, and an actual deployment. Gemini's backend decision explanation adapter compiles, requires explicit consent, and falls back safely; its live provider behavior is unverified.
+The deterministic platform is functional. Remaining enterprise/optional scope includes SSO/MFA, invitations/recovery and account lifecycle, workspace switching, advanced policy groups and multi-bundle management, externally witnessed audit checkpoints/key rotation, distributed limits/queues, external connector outcomes, retention automation, live per-stage streaming, AI policy suggestions/remediation, and an actual deployment. Gemini explanations were live-verified on 19 October 2026 through the authenticated API with explicit consent; the no-consent path returned a deterministic explanation. The UI now exposes an explicit Gemini consent action. The same update passed 31 regression tests, type checking, lint, and the production build. This follow-up did not repeat the historical browser/container checks above.
